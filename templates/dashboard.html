@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Gestão de Obra{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex flex-wrap items-end justify-between gap-4">
+  <div>
+    <h1 class="text-2xl font-bold text-slate-800">Painel do Prédio</h1>
+    <p class="text-slate-500 text-sm mt-1">
+      {{ num_floors }} andares · {{ apts_per_floor }} apartamentos por andar
+    </p>
+  </div>
+  <!-- Overall progress -->
+  <div class="bg-white rounded-xl shadow-sm px-5 py-3 flex items-center gap-4 min-w-[240px]">
+    <div class="flex-1">
+      <div class="flex justify-between text-xs text-slate-500 mb-1">
+        <span>Progresso geral do prédio</span>
+        <span class="font-bold text-slate-700">{{ overall_pct }}%</span>
+      </div>
+      <div class="w-full bg-slate-200 rounded-full h-2.5">
+        <div class="h-2.5 rounded-full transition-all
+             {% if overall_pct == 100 %}bg-green-500
+             {% elif overall_pct >= 50 %}bg-blue-500
+             {% else %}bg-yellow-400{% endif %}"
+             style="width:{{ overall_pct }}%"></div>
+      </div>
+      <p class="text-xs text-slate-400 mt-1">{{ overall_done }} / {{ overall_total }} tarefas</p>
+    </div>
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="flex flex-wrap items-center gap-3 text-xs text-slate-600 mb-5 bg-white rounded-lg shadow-sm px-4 py-2">
+  <span class="font-semibold">Legenda:</span>
+  <span class="flex items-center gap-1"><span class="w-4 h-4 rounded bg-slate-200 border border-slate-300 inline-block"></span>0%</span>
+  <span class="flex items-center gap-1"><span class="w-4 h-4 rounded bg-yellow-300 border border-yellow-400 inline-block"></span>1–49%</span>
+  <span class="flex items-center gap-1"><span class="w-4 h-4 rounded bg-orange-400 border border-orange-500 inline-block"></span>50–79%</span>
+  <span class="flex items-center gap-1"><span class="w-4 h-4 rounded bg-green-300 border border-green-400 inline-block"></span>80–99%</span>
+  <span class="flex items-center gap-1"><span class="w-4 h-4 rounded bg-green-500 border border-green-600 inline-block"></span>100%</span>
+</div>
+
+<!-- Floor grid (highest floor on top) -->
+<div class="space-y-2">
+  {% for floor_info in floor_data %}
+  <div class="bg-white rounded-xl shadow-sm px-4 py-3">
+    <div class="flex items-start gap-3">
+      <!-- Floor label -->
+      <div class="w-16 flex-shrink-0 text-center">
+        <span class="text-sm font-bold text-slate-700">{{ floor_info.floor }}º</span>
+        <div class="text-xs text-slate-400">Andar</div>
+      </div>
+      <!-- Apartment cells -->
+      <div class="flex flex-wrap gap-1.5">
+        {% for apt in floor_info.apartments %}
+        {% if apt.pct == 100 %}
+          {% set cell_cls = "bg-green-500 text-white border-green-600" %}
+        {% elif apt.pct >= 80 %}
+          {% set cell_cls = "bg-green-200 text-green-900 border-green-300" %}
+        {% elif apt.pct >= 50 %}
+          {% set cell_cls = "bg-orange-400 text-white border-orange-500" %}
+        {% elif apt.pct > 0 %}
+          {% set cell_cls = "bg-yellow-300 text-yellow-900 border-yellow-400" %}
+        {% else %}
+          {% set cell_cls = "bg-slate-100 text-slate-500 border-slate-300" %}
+        {% endif %}
+        <a href="/apartment/{{ floor_info.floor }}/{{ apt.number }}"
+           title="Apto {{ apt.number }} · Tipo {{ apt.apt_type }} · {{ apt.pct }}% ({{ apt.completed }}/{{ apt.total }})"
+           class="w-11 h-11 rounded-lg border flex flex-col items-center justify-center cursor-pointer
+                  hover:ring-2 hover:ring-blue-400 hover:scale-105 transition-all text-center
+                  {{ cell_cls }}">
+          <span class="text-xs font-bold leading-tight">{{ apt.number }}</span>
+          <span class="text-[10px] opacity-80 leading-tight">{{ apt.apt_type }}</span>
+        </a>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endblock %}

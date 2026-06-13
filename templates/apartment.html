@@ -1,0 +1,188 @@
+{% extends "base.html" %}
+{% block title %}Apto {{ number }} · {{ floor }}º Andar{% endblock %}
+
+{% block content %}
+
+<!-- Breadcrumb + Header -->
+<div class="flex flex-wrap items-start justify-between gap-4 mb-5">
+  <div>
+    <nav class="text-xs text-slate-400 mb-1">
+      <a href="/" class="hover:text-slate-600">Dashboard</a>
+      <span class="mx-1">/</span>
+      <span>{{ floor }}º Andar · Apartamento {{ number }}</span>
+    </nav>
+    <h1 class="text-2xl font-bold text-slate-800">
+      Apartamento {{ number }} &nbsp;·&nbsp; {{ floor }}º Andar
+    </h1>
+    <div class="flex flex-wrap items-center gap-4 mt-1 text-sm text-slate-500">
+      <span>
+        Tipo:
+        <select id="type-select" onchange="updateType(this.value)"
+                class="font-semibold text-blue-600 bg-transparent border-none cursor-pointer focus:outline-none">
+          {% for t in apt_types %}
+          <option value="{{ t }}" {% if t == apt.apt_type %}selected{% endif %}>{{ t }}</option>
+          {% endfor %}
+        </select>
+      </span>
+      <span id="progress-label">{{ completed }}/{{ total }} tarefas concluídas ({{ pct }}%)</span>
+    </div>
+  </div>
+
+  <div class="flex flex-wrap gap-2">
+    <!-- Upload photo -->
+    <label class="cursor-pointer inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700
+                  text-white text-sm font-medium px-4 py-2 rounded-lg transition">
+      📷 Ler Foto
+      <input type="file" id="photo-input" accept="image/*,image/heic" class="hidden"
+             onchange="uploadPhoto(this)">
+    </label>
+    <!-- Print -->
+    <a href="/print/{{ floor }}/{{ number }}" target="_blank"
+       class="inline-flex items-center gap-2 bg-slate-700 hover:bg-slate-800
+              text-white text-sm font-medium px-4 py-2 rounded-lg transition">
+      🖨️ Imprimir
+    </a>
+  </div>
+</div>
+
+<!-- Overall progress bar -->
+<div class="bg-white rounded-xl shadow-sm px-5 py-4 mb-5">
+  <div class="flex justify-between text-sm mb-2">
+    <span class="text-slate-600 font-medium">Progresso Geral</span>
+    <span class="font-bold text-slate-800" id="pct-label">{{ pct }}%</span>
+  </div>
+  <div class="w-full bg-slate-200 rounded-full h-3">
+    <div id="progress-bar"
+         class="h-3 rounded-full transition-all duration-500
+                {% if pct == 100 %}bg-green-500{% elif pct >= 50 %}bg-blue-500{% else %}bg-yellow-400{% endif %}"
+         style="width:{{ pct }}%"></div>
+  </div>
+  <!-- Per-env mini bars -->
+  <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-3">
+    {% for env in environments %}
+    <button onclick="showTab('{{ env.id }}')"
+            class="text-left p-2 rounded-lg hover:bg-slate-50 transition border border-slate-100">
+      <div class="flex justify-between text-xs text-slate-500 mb-1">
+        <span>{{ env.emoji }} {{ env.name|truncate(14, true, '') }}</span>
+        <span id="mini-{{ env.id }}">{{ env.completed }}/{{ env.total }}</span>
+      </div>
+      <div class="w-full bg-slate-200 rounded-full h-1">
+        <div id="minibar-{{ env.id }}"
+             class="h-1 rounded-full bg-blue-400"
+             style="width:{{ (env.completed / env.total * 100)|int if env.total > 0 else 0 }}%"></div>
+      </div>
+    </button>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- Upload result message -->
+<div id="upload-msg" class="hidden mb-4 p-3 rounded-lg text-sm font-medium"></div>
+
+<!-- Notes -->
+<div class="bg-white rounded-xl shadow-sm px-5 py-3 mb-5">
+  <label class="text-xs font-semibold text-slate-500 uppercase tracking-wide">Observações do apartamento</label>
+  <textarea id="notes-area" rows="2" placeholder="Ex: pendências, acesso restrito, data da última vistoria..."
+            class="w-full mt-1 text-sm text-slate-700 border-none focus:outline-none resize-none bg-transparent"
+            onblur="saveNotes(this.value)">{{ apt.notes }}</textarea>
+</div>
+
+<!-- Environment Tabs -->
+<div class="bg-white rounded-xl shadow-sm overflow-hidden">
+
+  <!-- Tab bar -->
+  <div class="flex overflow-x-auto border-b border-slate-200 bg-slate-50" id="tab-bar">
+    {% for env in environments %}
+    <button onclick="showTab('{{ env.id }}')"
+            id="tab-{{ env.id }}"
+            class="tab-btn flex-shrink-0 px-4 py-3 text-sm font-medium border-b-2 transition
+                   flex items-center gap-1.5 whitespace-nowrap
+                   {% if loop.first %}border-blue-500 text-blue-600 bg-white
+                   {% else %}border-transparent text-slate-500 hover:text-slate-700{% endif %}">
+      <span>{{ env.emoji }}</span>
+      <span class="hidden sm:inline">{{ env.name }}</span>
+      <span id="tab-count-{{ env.id }}"
+            class="text-xs px-1.5 py-0.5 rounded-full
+                   {% if env.completed == env.total %}bg-green-100 text-green-700
+                   {% elif env.completed > 0 %}bg-blue-100 text-blue-700
+                   {% else %}bg-slate-200 text-slate-500{% endif %}">
+        {{ env.completed }}/{{ env.total }}
+      </span>
+    </button>
+    {% endfor %}
+  </div>
+
+  <!-- Tab panels -->
+  {% for env in environments %}
+  <div id="panel-{{ env.id }}" class="env-panel {% if not loop.first %}hidden{% endif %} p-4">
+
+    <div class="flex items-center justify-between mb-3">
+      <span class="font-semibold text-slate-700">{{ env.emoji }} {{ env.name }}</span>
+      <div class="flex items-center gap-3">
+        <button onclick="markAllEnv('{{ env.id }}', 'C')"
+                class="text-xs text-slate-400 hover:text-green-600 transition">✓ Tudo concluído</button>
+        <button onclick="markAllEnv('{{ env.id }}', 'N')"
+                class="text-xs text-slate-400 hover:text-red-400 transition">✕ Zerar tudo</button>
+      </div>
+    </div>
+
+    <!-- Status legend for first panel only, sticky -->
+    <div class="flex items-center gap-2 text-xs text-slate-500 mb-3 flex-wrap">
+      {% for s_key, s_info in STATUS.items() %}
+      <span class="px-2 py-0.5 rounded font-bold border"
+            style="background:{{ s_info.bg }};border-color:{{ s_info.border }};color:{{ s_info.color }}">
+        {{ s_key }} = {{ s_info.label }}
+      </span>
+      {% endfor %}
+    </div>
+
+    <!-- Task rows -->
+    <div class="divide-y divide-slate-100">
+      {% for task in env.tasks %}
+      <div class="flex items-center gap-2 py-1.5 px-1 hover:bg-slate-50 rounded transition
+                  group" id="row-{{ env.id }}-{{ task.index }}">
+        <span class="text-[11px] text-slate-300 w-5 text-right flex-shrink-0 select-none">
+          {{ task.index + 1 }}
+        </span>
+        <span class="flex-1 text-sm text-slate-700">{{ task.name }}</span>
+
+        <!-- 4 status buttons -->
+        <div class="flex gap-1 flex-shrink-0">
+          {% for s_key, s_info in STATUS.items() %}
+          <button id="btn-{{ env.id }}-{{ task.index }}-{{ s_key }}"
+                  onclick="setStatus({{ apt.id }}, '{{ env.id }}', {{ task.index }}, '{{ s_key }}')"
+                  class="status-btn w-8 h-7 rounded text-xs font-bold border transition
+                         {% if task.status == s_key %}ring-2 ring-offset-1{% endif %}"
+                  style="
+                    {% if task.status == s_key %}
+                      background:{{ s_info.bg }};border-color:{{ s_info.border }};color:{{ s_info.color }};
+                      ring-color:{{ s_info.border }};
+                    {% else %}
+                      background:white;border-color:#e2e8f0;color:#cbd5e1;
+                    {% endif %}
+                  ">
+            {{ s_key }}
+          </button>
+          {% endfor %}
+        </div>
+      </div>
+      {% endfor %}
+    </div>
+
+  </div>
+  {% endfor %}
+</div>
+
+<script>
+  const APT_ID  = {{ apt.id }};
+  const FLOOR   = {{ floor }};
+  const NUMBER  = {{ number }};
+
+  // Environment task counts (for mini-bar updates)
+  const ENV_TOTALS = {
+    {% for env in environments %}
+    "{{ env.id }}": {{ env.total }},
+    {% endfor %}
+  };
+</script>
+{% endblock %}

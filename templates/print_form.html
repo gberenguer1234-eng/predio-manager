@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Checklist · Apto {{ number }} · {{ floor }}º Andar</title>
+  <style>
+    @page { size: A4; margin: 10mm 12mm; }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 8pt;
+      color: #111;
+      background: #fff;
+    }
+
+    /* ── No-print toolbar ── */
+    .toolbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: #1e293b; color: #fff;
+      padding: 8px 16px;
+      display: flex; align-items: center; gap: 12px;
+      z-index: 999; font-size: 13px;
+    }
+    .toolbar button {
+      background: #3b82f6; color: #fff;
+      border: none; border-radius: 6px;
+      padding: 6px 14px; cursor: pointer; font-size: 13px;
+    }
+    .toolbar a { color: #93c5fd; text-decoration: none; }
+    .toolbar .hint { color: #94a3b8; font-size: 11px; }
+    @media print { .toolbar { display: none !important; } }
+
+    /* ── Header ── */
+    .form-header {
+      border: 2px solid #111;
+      padding: 6px 10px;
+      margin-bottom: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .form-header .title { font-size: 12pt; font-weight: bold; }
+    .form-header .meta  { font-size: 8pt; margin-top: 2px; }
+    .form-header .right { text-align: right; font-size: 8pt; line-height: 1.8; }
+
+    /* ── Legend ── */
+    .legend {
+      border: 1px solid #ccc;
+      background: #f8fafc;
+      padding: 3px 8px;
+      margin-bottom: 6px;
+      display: flex;
+      gap: 16px;
+      align-items: center;
+      font-size: 7.5pt;
+    }
+    .legend strong { font-size: 8pt; }
+
+    /* ── Two-column layout ── */
+    .cols { columns: 2; column-gap: 10px; }
+
+    /* ── Environment section ── */
+    .env-section {
+      break-inside: avoid-column;
+      margin-bottom: 5px;
+    }
+    .env-title {
+      background: #1e293b;
+      color: #fff;
+      padding: 3px 6px;
+      font-weight: bold;
+      font-size: 8pt;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Task table ── */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    td, th {
+      border: 0.4px solid #d1d5db;
+      padding: 1.5px 3px;
+      vertical-align: middle;
+      line-height: 1.3;
+    }
+    th {
+      background: #f1f5f9;
+      text-align: center;
+      font-size: 7pt;
+      font-weight: bold;
+    }
+    .col-num  { width: 16px; text-align: right; color: #94a3b8; font-size: 6.5pt; }
+    .col-name { font-size: 7.5pt; }
+    .col-status { width: 22px; text-align: center; }
+
+    /* ── Bubble ── */
+    .bubble {
+      display: inline-block;
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      border: 1.5px solid #374151;
+      vertical-align: middle;
+    }
+    .bubble.filled { background: #111; }
+
+    /* ── Signature ── */
+    .signature {
+      margin-top: 8px;
+      border-top: 1px solid #374151;
+      padding-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 7.5pt;
+    }
+    .sig-line {
+      border-bottom: 1px solid #374151;
+      width: 200px;
+      display: inline-block;
+      margin-left: 4px;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Toolbar (hidden on print) -->
+<div class="toolbar">
+  <button onclick="window.print()">🖨️ Imprimir / Salvar PDF</button>
+  <a href="/apartment/{{ floor }}/{{ number }}">← Voltar ao apartamento</a>
+  <span class="hint">Preencha com caneta preta · Uma bolha por tarefa</span>
+</div>
+
+<!-- Space so toolbar doesn't overlap content in browser -->
+<div style="height:42px" class="toolbar-spacer"></div>
+<style>@media print { .toolbar-spacer { display:none } }</style>
+
+<!-- Form header -->
+<div class="form-header">
+  <div>
+    <div class="title">CHECKLIST DE OBRA</div>
+    <div class="meta">
+      Apartamento: <strong>{{ number }}</strong> &nbsp;|&nbsp;
+      Andar: <strong>{{ floor }}º</strong> &nbsp;|&nbsp;
+      Tipo: <strong>{{ apt.apt_type }}</strong>
+    </div>
+  </div>
+  <div class="right">
+    Data: _____ / _____ / _________<br>
+    Encarregado: _______________________
+  </div>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <strong>Legenda:</strong>
+  <span><span class="bubble"></span> N = Não Iniciado</span>
+  <span><span class="bubble"></span> I = Incompleto</span>
+  <span><span class="bubble"></span> A = Ajuste</span>
+  <span><span class="bubble"></span> C = Concluído</span>
+  <span style="margin-left:auto;color:#64748b">Preencha apenas UMA bolha por linha</span>
+</div>
+
+<!-- Two-column checklist -->
+<div class="cols">
+  {% for env in environments %}
+  <div class="env-section">
+    <div class="env-title">{{ env.emoji }} {{ env.name }}</div>
+    <table>
+      <tr>
+        <th class="col-num">#</th>
+        <th style="text-align:left">Tarefa</th>
+        <th class="col-status">N</th>
+        <th class="col-status">I</th>
+        <th class="col-status">A</th>
+        <th class="col-status">C</th>
+      </tr>
+      {% for task in env.tasks %}
+      {% set tidx = loop.index0 %}
+      {% set key = env.id ~ '_' ~ tidx %}
+      {% set cur = statuses_db[key] if key in statuses_db else 'N' %}
+      <tr>
+        <td class="col-num">{{ tidx + 1 }}</td>
+        <td class="col-name">{{ task }}</td>
+        {% for s in ['N', 'I', 'A', 'C'] %}
+        <td class="col-status">
+          <span class="bubble {% if cur == s %}filled{% endif %}"></span>
+        </td>
+        {% endfor %}
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  {% endfor %}
+</div>
+
+<!-- Signature line -->
+<div class="signature">
+  <div>Assinatura do Encarregado: <span class="sig-line"></span></div>
+  <div>Visto do Responsável: <span class="sig-line"></span></div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,17 @@
+/* Status buttons */
+.status-btn {
+  transition: all 0.1s ease;
+  user-select: none;
+}
+.status-btn:hover {
+  transform: scale(1.08);
+}
+
+/* Tab buttons */
+.tab-btn { transition: all 0.15s ease; }
+
+/* Hide scrollbar on tab bar but keep scroll */
+#tab-bar {
+  scrollbar-width: none;
+}
+#tab-bar::-webkit-scrollbar { display: none; }

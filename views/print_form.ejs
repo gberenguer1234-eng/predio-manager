@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Checklist · Apt <%= displayNum %></title>
+  <style>
+    @page { size: A4 landscape; margin: 7mm 10mm; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: Arial, Helvetica, sans-serif;
+      font-size: 8pt;
+      color: #1a202c;
+      background: #fff;
+    }
+
+    /* ── Toolbar (hidden on print) ─────────────────────────── */
+    .toolbar {
+      position: fixed; top: 0; left: 0; right: 0;
+      background: #1e293b; color: #fff;
+      padding: 8px 16px; display: flex; align-items: center;
+      gap: 8px; z-index: 999; font-size: 13px; flex-wrap: wrap;
+    }
+    .toolbar button { background: #3b82f6; color: #fff; border: none; border-radius: 6px; padding: 6px 14px; cursor: pointer; font-size: 13px; }
+    .toolbar button.sec { background: #475569; }
+    .toolbar a { color: #93c5fd; text-decoration: none; margin-left: 4px; }
+    .toolbar span { color: #94a3b8; font-size: 11px; }
+    @media print { .toolbar, .spacer { display: none !important; } }
+
+    /* ── Header ─────────────────────────────────────────────── */
+    .header {
+      border: 2.5px solid #1e293b;
+      padding: 4px 9px;
+      margin-bottom: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .apt-id  { font-size: 16pt; font-weight: 900; color: #1e293b; line-height: 1; }
+    .apt-sub { font-size: 7pt; color: #64748b; margin-top: 2px; }
+    .hdr-r   { text-align: right; font-size: 7.5pt; line-height: 2; }
+
+    /* ── Legend ─────────────────────────────────────────────── */
+    .legend {
+      border: 1px solid #e2e8f0; background: #f8fafc;
+      padding: 2px 9px; margin-bottom: 4px;
+      display: flex; gap: 10px; align-items: center;
+      font-size: 7pt; flex-wrap: wrap;
+    }
+    .legend strong { color: #1e293b; margin-right: 4px; }
+    .badge {
+      display: inline-flex; align-items: center; gap: 3px;
+      padding: 1px 5px; border-radius: 3px;
+      font-weight: bold; font-size: 7pt; border: 1px solid;
+    }
+    .badge-N { background: #f3f4f6; border-color: #9ca3af; color: #374151; }
+    .badge-I { background: #dbeafe; border-color: #60a5fa; color: #1d4ed8; }
+    .badge-A { background: #fef3c7; border-color: #fbbf24; color: #92400e; }
+    .badge-C { background: #dcfce7; border-color: #4ade80; color: #15803d; }
+    .badge-R { background: #ede9fe; border-color: #a78bfa; color: #6d28d9; }
+    .legend-hint { margin-left: auto; color: #94a3b8; font-size: 6.5pt; }
+
+    /* ── 3 colunas lado a lado ──────────────────────────────── */
+    .cols-3 {
+      display: flex;
+      gap: 7mm;
+      align-items: flex-start;
+    }
+    .col { flex: 1; min-width: 0; }
+
+    /* ── Section header (environment) ──────────────────────── */
+    .env-hdr {
+      background: #1e293b; color: #fff;
+      padding: 3px 7px;
+      font-weight: bold; font-size: 8pt;
+      letter-spacing: 0.02em;
+    }
+
+    /* ── Task table ─────────────────────────────────────────── */
+    table { width: 100%; border-collapse: collapse; }
+
+    thead tr { border-bottom: 1.5px solid #cbd5e1; }
+    thead th {
+      padding: 2px 3px;
+      font-size: 6.5pt; font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    .th-num  { width: 14px; text-align: right; background: #f8fafc; color: #94a3b8; }
+    .th-task { text-align: left; background: #f8fafc; color: #475569; }
+    .th-N    { width: 18px; text-align: center; background: #f3f4f6; color: #374151; }
+    .th-I    { width: 18px; text-align: center; background: #dbeafe; color: #1d4ed8; }
+    .th-A    { width: 18px; text-align: center; background: #fef3c7; color: #92400e; }
+    .th-C    { width: 18px; text-align: center; background: #dcfce7; color: #15803d; }
+    .th-R    { width: 18px; text-align: center; background: #ede9fe; color: #6d28d9; }
+
+    tbody tr { border-bottom: 0.3px solid #e2e8f0; }
+    tbody tr.even { background: #f8fafc; }
+    tbody tr.odd  { background: #ffffff; }
+    tbody td { padding: 2px 3px; vertical-align: middle; line-height: 1.25; }
+
+    .td-num  { text-align: right; color: #94a3b8; font-size: 6.5pt; width: 14px; }
+    .td-task { font-size: 7.5pt; color: #1a202c; }
+    .td-s    { width: 18px; text-align: center; }
+
+    /* ── Bubble ─────────────────────────────────────────────── */
+    .bbl {
+      display: inline-block;
+      width: 13px; height: 13px;
+      border-radius: 50%;
+      border: 1.5px solid #475569;
+      vertical-align: middle;
+    }
+    .bbl.filled { background: #1a202c; border-color: #1a202c; }
+
+    /* ── Assinatura ─────────────────────────────────────────── */
+    .assinatura {
+      margin-top: 6px;
+      border-top: 1px solid #374151;
+      padding-top: 4px;
+      display: flex; justify-content: space-between;
+      font-size: 7pt; color: #374151;
+    }
+    .sig { border-bottom: 1px solid #374151; width: 180px; display: inline-block; margin-left: 3px; }
+  </style>
+</head>
+<body>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <button onclick="window.print()">🖨️ Imprimir (1 folha paisagem)</button>
+  <% if (blank) { %>
+    <button class="sec" onclick="location.href='/print/<%= floor %>/<%= number %>'">📊 Ver status atual</button>
+  <% } else { %>
+    <button class="sec" onclick="location.href='/print/<%= floor %>/<%= number %>?blank=true'">📋 Gabarito em branco</button>
+  <% } %>
+  <a href="/apartment/<%= floor %>/<%= number %>">← Voltar</a>
+  <span>Impressão paisagem · caneta preta · uma bolha por linha</span>
+</div>
+<div class="spacer" style="height:44px"></div>
+
+<%
+  function cur(envId, tidx) { return statusesDb[envId + '_' + tidx] || ''; }
+
+  function renderTable(env) {
+    var rows = '';
+    env.tasks.forEach(function(task, i) {
+      var c   = cur(env.id, i);
+      var cls = i % 2 === 0 ? 'odd' : 'even';
+      rows += '<tr class="' + cls + '">';
+      rows += '<td class="td-num">' + (i + 1) + '</td>';
+      rows += '<td class="td-task">' + task + '</td>';
+      ['N','I','A','C','R'].forEach(function(s) {
+        rows += '<td class="td-s"><span class="bbl' + (c === s ? ' filled' : '') + '"></span></td>';
+      });
+      rows += '</tr>';
+    });
+    return rows;
+  }
+%>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <div class="apt-id">Apt <%= displayNum %></div>
+    <div class="apt-sub">
+      <%= floor %>º Andar &nbsp;·&nbsp; Tipo: <strong><%= apt.apt_type %></strong>
+      <% if (blank) { %>&nbsp;·&nbsp; <em>gabarito em branco</em><% } %>
+    </div>
+  </div>
+  <div class="hdr-r">
+    Data: _____ / _____ / _________<br>
+    Encarregado: _______________________
+  </div>
+</div>
+
+<!-- Legenda -->
+<div class="legend">
+  <strong>Legenda:</strong>
+  <span class="badge badge-N">N &nbsp;Não Iniciado</span>
+  <span class="badge badge-I">I &nbsp;Incompleto</span>
+  <span class="badge badge-A">A &nbsp;Ajuste</span>
+  <span class="badge badge-C">C &nbsp;Concluído</span>
+  <span class="badge badge-R">R &nbsp;Reajuste</span>
+  <span class="legend-hint">Impressão paisagem · preencha só UMA bolha por linha</span>
+</div>
+
+<!-- 3 colunas -->
+<div class="cols-3">
+<% environments.forEach(function(env) { %>
+  <div class="col">
+    <div class="env-hdr"><%= env.emoji %>&nbsp;<%= env.name %></div>
+    <table>
+      <thead>
+        <tr>
+          <th class="th-num">#</th>
+          <th class="th-task">Tarefa</th>
+          <th class="th-N">N</th>
+          <th class="th-I">I</th>
+          <th class="th-A">A</th>
+          <th class="th-C">C</th>
+          <th class="th-R">R</th>
+        </tr>
+      </thead>
+      <tbody><%- renderTable(env) %></tbody>
+    </table>
+  </div>
+<% }); %>
+</div>
+
+<!-- Assinatura -->
+<div class="assinatura">
+  <div>Assinatura do Encarregado:&nbsp;<span class="sig"></span></div>
+  <div>Visto do Responsável:&nbsp;<span class="sig"></span></div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+predio.db
+predio.db-wal
+predio.db-shm
+uploads/
+*.log
+server.log
+cf_*.txt
+cloudflared.exe
+.env
