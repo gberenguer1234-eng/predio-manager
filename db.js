@@ -1,15 +1,20 @@
-const { DatabaseSync } = require("node:sqlite");
-const path = require("path");
+const Database = require("better-sqlite3");
+const path     = require("path");
+const fs       = require("fs");
 const { NUM_FLOORS, APTS_PER_FLOOR } = require("./checklist_data");
 
-// Em produção (Fly.io) usa volume persistente em /data; localmente usa a pasta do projeto
+// Em produção usa volume persistente (DB_PATH env); localmente usa a pasta do projeto
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, "predio.db");
+
+// Garante que a pasta do banco existe (necessário para /data no Glitch/Fly)
+fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
 
 let _db;
 function getDb() {
   if (!_db) {
-    _db = new DatabaseSync(DB_PATH);
-    _db.exec("PRAGMA journal_mode = DELETE; PRAGMA synchronous = FULL");
+    _db = new Database(DB_PATH);
+    _db.pragma("journal_mode = DELETE");
+    _db.pragma("synchronous = FULL");
   }
   return _db;
 }
