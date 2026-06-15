@@ -5,9 +5,7 @@ services:
     buildCommand: npm install
     startCommand: npm start
     envVars:
-      - key: TURSO_DB_URL
-        sync: false
-      - key: TURSO_AUTH_TOKEN
+      - key: DATABASE_URL
         sync: false
       - key: NODE_ENV
         value: production
