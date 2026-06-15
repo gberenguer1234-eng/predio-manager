@@ -124,6 +124,20 @@ function getApartmentProgress(apartment_id, total) {
   return { completed, total: total ?? completed };
 }
 
+// ── All apartments (para filtro por tarefa) ───────────────────────────────────
+
+function getAllApartments() {
+  return getDb()
+    .prepare("SELECT id, floor, number, apt_type FROM apartments ORDER BY floor, number")
+    .all();
+}
+
+function getStatusByLocation(environment_id, task_index) {
+  return getDb()
+    .prepare("SELECT apartment_id, status FROM task_status WHERE environment_id=? AND task_index=?")
+    .all(environment_id, task_index);
+}
+
 // ── Dashboard bulk query ──────────────────────────────────────────────────────
 
 function getAllProgress() {
@@ -155,5 +169,5 @@ module.exports = {
   initDb, getApartment, getApartmentById,
   updateApartmentType, updateApartmentNotes,
   getTaskStatuses, setTaskStatus, getCompletedCount, getApartmentProgress,
-  getAllProgress, saveInspectionLog,
+  getAllProgress, getAllApartments, getStatusByLocation, saveInspectionLog,
 };

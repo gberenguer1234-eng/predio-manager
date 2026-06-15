@@ -58,10 +58,10 @@ app.get("/", (_req, res) => {
     if (!byFloor[r.floor]) byFloor[r.floor] = [];
     byFloor[r.floor].push(r);
   }
-  // Highest floor first
+  // 1º andar primeiro, subindo até o 15º
   const floorData = Object.keys(byFloor)
     .map(Number)
-    .sort((a, b) => b - a)
+    .sort((a, b) => a - b)
     .map((f) => ({ floor: f, apartments: byFloor[f] }));
 
   const overallDone  = rowsWithTotal.reduce((s, r) => s + r.completed, 0);
@@ -74,6 +74,7 @@ app.get("/", (_req, res) => {
     overallPct: pct(overallDone, overallTotal),
     numFloors:    data.NUM_FLOORS,
     aptsPerFloor: data.APTS_PER_FLOOR,
+    allTasks:     data.getAllUniqueTasks(),
   });
 });
 
@@ -126,6 +127,54 @@ app.get("/print/:floor/:number", (req, res) => {
     STATUS: data.STATUS,
     blank,
   });
+});
+
+// ── API: filtro por tarefa ────────────────────────────────────────────────────
+app.get("/api/task-filter", (req, res) => {
+  const taskName = req.query.task;
+  if (!taskName) return res.json({ apartments: [] });
+
+  const apartments = db.getAllApartments();
+
+  // Descobre todas as localizações únicas desta tarefa (env_id + index)
+  const locationKeys = new Map(); // "env_id:idx" → {environment_id, task_index}
+  for (const apt of apartments) {
+    for (const loc of data.findTaskLocations(taskName, apt.number)) {
+      const key = `${loc.environment_id}:${loc.task_index}`;
+      if (!locationKeys.has(key)) locationKeys.set(key, loc);
+    }
+  }
+
+  // Busca todos os status dessas localizações de uma vez
+  const statusMap = new Map(); // apartment_id → status
+  for (const loc of locationKeys.values()) {
+    const rows = db.getStatusByLocation(loc.environment_id, loc.task_index);
+    for (const row of rows) {
+      if (!statusMap.has(row.apartment_id)) statusMap.set(row.apartment_id, row.status);
+    }
+  }
+
+  // Monta resultado
+  const result = apartments.map((apt) => {
+    const hasTask = data.findTaskLocations(taskName, apt.number).length > 0;
+    return {
+      floor:      apt.floor,
+      number:     apt.number,
+      apt_type:   apt.apt_type,
+      status:     hasTask ? (statusMap.get(apt.id) || "N") : null,
+    };
+  });
+
+  // Agrupa por andar (ordem crescente)
+  const byFloor = {};
+  for (const r of result) {
+    if (!byFloor[r.floor]) byFloor[r.floor] = [];
+    byFloor[r.floor].push(r);
+  }
+  const floors = Object.keys(byFloor).map(Number).sort((a, b) => a - b)
+    .map((f) => ({ floor: f, apartments: byFloor[f] }));
+
+  res.json({ task: taskName, floors });
 });
 
 // ── API: set task status ──────────────────────────────────────────────────────

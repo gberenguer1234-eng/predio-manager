@@ -134,8 +134,37 @@ const APTS_PER_FLOOR  = 27;
 // TOTAL_TASKS mantido para compatibilidade (usa standard como base)
 const TOTAL_TASKS = getTotalTasks(3);
 
+// ── Helpers para o filtro por tarefa ─────────────────────────────────────────
+
+// Retorna lista ordenada de todos os nomes de tarefas únicos em todos os tipos
+function getAllUniqueTasks() {
+  const allEnvs = [
+    ...ENVIRONMENTS_STANDARD,
+    ...ENVIRONMENTS_A,
+    ...ENVIRONMENTS_B,
+    ...ENVIRONMENTS_C,
+  ];
+  const seen = new Set();
+  for (const env of allEnvs) {
+    for (const task of env.tasks) seen.add(task);
+  }
+  return [...seen].sort((a, b) => a.localeCompare(b, "pt"));
+}
+
+// Para um nome de tarefa e número de apartamento, retorna onde ela está (env_id + índice)
+function findTaskLocations(taskName, aptNumber) {
+  const envs = getEnvironments(aptNumber);
+  const results = [];
+  for (const env of envs) {
+    const idx = env.tasks.indexOf(taskName);
+    if (idx !== -1) results.push({ environment_id: env.id, task_index: idx });
+  }
+  return results;
+}
+
 module.exports = {
   ENVIRONMENTS: ENVIRONMENTS_STANDARD, // compatibilidade
   getEnvironments, getTotalTasks,
+  getAllUniqueTasks, findTaskLocations,
   STATUS, APARTMENT_TYPES, NUM_FLOORS, APTS_PER_FLOOR, TOTAL_TASKS,
 };
